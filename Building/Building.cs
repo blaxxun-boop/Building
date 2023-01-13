@@ -6,15 +6,17 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using ServerSync;
 using SkillManager;
+using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace Building;
 
 [BepInPlugin(ModGUID, ModName, ModVersion)]
+[BepInIncompatibility("org.bepinex.plugins.valheim_plus")]
 public class Building : BaseUnityPlugin
 {
 	private const string ModName = "Building";
-	private const string ModVersion = "1.2.2";
+	private const string ModVersion = "1.2.3";
 	private const string ModGUID = "org.bepinex.plugins.building";
 
 	private static readonly ConfigSync configSync = new(ModGUID) { DisplayName = ModName, CurrentVersion = ModVersion, MinimumRequiredVersion = ModVersion };
@@ -24,7 +26,10 @@ public class Building : BaseUnityPlugin
 	private static ConfigEntry<float> supportLossFactor = null!;
 	private static ConfigEntry<float> healthFactor = null!;
 	private static ConfigEntry<int> freeBuildLevelRequirement = null!;
+	private static ConfigEntry<int> durabilityUsageLevelRequirement = null!;
 	private static ConfigEntry<float> experienceGainedFactor = null!;
+	private static ConfigEntry<int> experienceLoss = null!;
+	private static ConfigEntry<int> staminaReductionPerLevel = null!;
 
 	private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description, bool synchronizedSetting = true)
 	{
@@ -65,13 +70,42 @@ public class Building : BaseUnityPlugin
 		supportLossFactor = config("2 - Building", "Support Loss Factor", 0.75f, new ConfigDescription("Support loss factor for vertical and horizontal building at skill level 100.", new AcceptableValueRange<float>(0.01f, 1f)));
 		healthFactor = config("2 - Building", "Health Factor", 3f, new ConfigDescription("Health factor for building pieces at skill level 100.", new AcceptableValueRange<float>(1f, 10f)));
 		freeBuildLevelRequirement = config("2 - Building", "Free Build Level Requirement", 50, new ConfigDescription("Minimum required skill level to be able to receive free building pieces. 0 is disabled.", new AcceptableValueRange<int>(0, 100), new ConfigurationManagerAttributes { ShowRangeAsPercent = false }));
+		durabilityUsageLevelRequirement = config("2 - Building", "Durability Increase Level Requirement", 30, new ConfigDescription("Minimum required skill level to reduce the durability usage of hammers by 30%. 0 is disabled.", new AcceptableValueRange<int>(0, 100), new ConfigurationManagerAttributes { ShowRangeAsPercent = false }));
+		staminaReductionPerLevel = config("2 - Building", "Stamina Reduction per Level", 1, new ConfigDescription("Reduces the stamina usage while building. Percentage stamina reduction per level. 0 is disabled.", new AcceptableValueRange<int>(0, 100)));
 		experienceGainedFactor = config("3 - Other", "Skill Experience Gain Factor", 1f, new ConfigDescription("Factor for experience gained for the building skill.", new AcceptableValueRange<float>(0.01f, 5f)));
 		experienceGainedFactor.SettingChanged += (_, _) => building.SkillGainFactor = experienceGainedFactor.Value;
 		building.SkillGainFactor = experienceGainedFactor.Value;
+		experienceLoss = config("3 - Other", "Skill Experience Loss", 0, new ConfigDescription("How much experience to lose in the building skill on death.", new AcceptableValueRange<int>(0, 100)));
+		experienceLoss.SettingChanged += (_, _) => building.SkillLoss = experienceLoss.Value;
+		building.SkillLoss = experienceLoss.Value;
 
 		Assembly assembly = Assembly.GetExecutingAssembly();
 		Harmony harmony = new(ModGUID);
 		harmony.PatchAll(assembly);
+	}
+
+	[HarmonyPatch(typeof(Player), nameof(Player.UpdatePlacement))]
+	private static class ChangeStaminaUsage
+	{
+		private static float stamina = 0f;
+
+		private static void Prefix(Player __instance, out ItemDrop.ItemData? __state)
+		{
+			__state = __instance.GetRightItem();
+			if (__state?.m_shared.m_name == "$item_hammer")
+			{
+				stamina = __state.m_shared.m_attack.m_attackStamina;
+				__state.m_shared.m_attack.m_attackStamina *= Mathf.Max(0, 1 - __instance.GetSkillFactor("Building") * staminaReductionPerLevel.Value);
+			}
+		}
+
+		private static void Finalizer(ItemDrop.ItemData? __state)
+		{
+			if (__state is not null)
+			{
+				__state.m_shared.m_attack.m_attackStamina = stamina;
+			}
+		}
 	}
 
 	[HarmonyPatch(typeof(WearNTear), nameof(WearNTear.OnPlaced))]
@@ -147,5 +181,29 @@ public class Building : BaseUnityPlugin
 	private class RecoverResources
 	{
 		private static bool Prefix(Piece __instance) => !__instance.GetComponent<ZNetView>().GetZDO().GetBool("BuildingSkill FreeBuild");
+	}
+
+	[HarmonyPatch(typeof(Player), nameof(Player.UpdatePlacement))]
+	private static class ReduceHammerDurabilityLoss
+	{
+		private static bool reduced = false;
+
+		private static void Prefix(Player __instance)
+		{
+			reduced = false;
+			if (durabilityUsageLevelRequirement.Value > 0 && durabilityUsageLevelRequirement.Value <= __instance.GetSkillFactor("Building") * 100 && __instance.GetRightItem() is { } hammer)
+			{
+				hammer.m_shared.m_useDurabilityDrain *= 0.7f;
+				reduced = true;
+			}
+		}
+
+		private static void Finalizer(Player __instance)
+		{
+			if (__instance.GetRightItem() is { } hammer && reduced)
+			{
+				hammer.m_shared.m_useDurabilityDrain /= 0.7f;
+			}
+		}
 	}
 }
