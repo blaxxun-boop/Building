@@ -16,7 +16,7 @@ namespace Building;
 public class Building : BaseUnityPlugin
 {
 	private const string ModName = "Building";
-	private const string ModVersion = "1.2.3";
+	private const string ModVersion = "1.2.4";
 	private const string ModGUID = "org.bepinex.plugins.building";
 
 	private static readonly ConfigSync configSync = new(ModGUID) { DisplayName = ModName, CurrentVersion = ModVersion, MinimumRequiredVersion = ModVersion };
@@ -101,7 +101,7 @@ public class Building : BaseUnityPlugin
 
 		private static void Finalizer(ItemDrop.ItemData? __state)
 		{
-			if (__state is not null)
+			if (__state?.m_shared.m_name == "$item_hammer")
 			{
 				__state.m_shared.m_attack.m_attackStamina = stamina;
 			}
