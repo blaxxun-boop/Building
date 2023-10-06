@@ -16,7 +16,7 @@ namespace Building;
 public class Building : BaseUnityPlugin
 {
 	private const string ModName = "Building";
-	private const string ModVersion = "1.2.4";
+	private const string ModVersion = "1.2.5";
 	private const string ModGUID = "org.bepinex.plugins.building";
 
 	private static readonly ConfigSync configSync = new(ModGUID) { DisplayName = ModName, CurrentVersion = ModVersion, MinimumRequiredVersion = ModVersion };
@@ -46,7 +46,7 @@ public class Building : BaseUnityPlugin
 	private enum Toggle
 	{
 		On = 1,
-		Off = 0
+		Off = 0,
 	}
 
 	private class ConfigurationManagerAttributes
