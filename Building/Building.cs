@@ -28,6 +28,7 @@ public class Building : BaseUnityPlugin
 	private static ConfigEntry<int> freeBuildLevelRequirement = null!;
 	private static ConfigEntry<int> durabilityUsageLevelRequirement = null!;
 	private static ConfigEntry<float> experienceGainedFactor = null!;
+ 	private static ConfigEntry<float> plannedPiecesExperienceGainedFactor = null;
 	private static ConfigEntry<int> experienceLoss = null!;
 	private static ConfigEntry<int> staminaReductionPerLevel = null!;
 
@@ -78,6 +79,8 @@ public class Building : BaseUnityPlugin
 		experienceLoss = config("3 - Other", "Skill Experience Loss", 0, new ConfigDescription("How much experience to lose in the building skill on death.", new AcceptableValueRange<int>(0, 100)));
 		experienceLoss.SettingChanged += (_, _) => building.SkillLoss = experienceLoss.Value;
 		building.SkillLoss = experienceLoss.Value;
+  		plannedPiecesExperienceGainedFactor = config("3 - Other", "Skill Experience Gain Factor for Planned Pieces (PlanBuild Mod Compatibility)", 1f, new ConfigDescription("Factor for experience gained for planned pieces skill.", new AcceptableValueRange<float>(0.00f, 5f)));
+
 
 		Assembly assembly = Assembly.GetExecutingAssembly();
 		Harmony harmony = new(ModGUID);
@@ -124,8 +127,15 @@ public class Building : BaseUnityPlugin
 				forFree = Random.Range(freeBuildLevelRequirement.Value / 100f, 5.5f) <= Player.m_localPlayer.GetSkillFactor("Building");
 			}
 			__instance.GetComponent<ZNetView>().GetZDO().Set("BuildingSkill FreeBuild", forFree);
-
-			Player.m_localPlayer.RaiseSkill("Building");
+			
+   			if (__instance.name.EndsWith("_planned")) 
+      			{
+				Player.m_localPlayer.RaiseSkill("Building") * plannedPiecesExperienceGainedFactor;
+    			}
+       			else 
+	  		{
+				Player.m_localPlayer.RaiseSkill("Building");
+     			}
 		}
 	}
 
