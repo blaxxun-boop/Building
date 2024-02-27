@@ -130,9 +130,9 @@ public class Building : BaseUnityPlugin
 			
    			if (__instance.name.EndsWith("_planned")) 
       			{
-	 			building.SkillGainFactor = experienceGainedFactor.Value * plannedPiecesExperienceGainedFactor;
+	 			building.SkillGainFactor = experienceGainedFactor.Value * plannedPiecesExperienceGainedFactor.Value;
 				Player.m_localPlayer.RaiseSkill("Building");
-	 			building.SkillGainFactor = experienceGainedFactor.Value / plannedPiecesExperienceGainedFactor;
+	 			building.SkillGainFactor = experienceGainedFactor.Value / plannedPiecesExperienceGainedFactor.Value;
     			}
        			else 
 	  		{
