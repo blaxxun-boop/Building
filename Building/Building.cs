@@ -125,7 +125,8 @@ public class Building : BaseUnityPlugin
 			}
 			__instance.GetComponent<ZNetView>().GetZDO().Set("BuildingSkill FreeBuild", forFree);
 
-			Player.m_localPlayer.RaiseSkill("Building");
+			if (Player.m_localPlayer.GetRightItem() != null && !Player.m_localPlayer.GetRightItem().m_shared.m_name.ToLower().Contains("blueprint"))
+				Player.m_localPlayer.RaiseSkill("Building");
 		}
 	}
 
