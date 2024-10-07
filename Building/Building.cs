@@ -62,6 +62,8 @@ public class Building : BaseUnityPlugin
 		building.Description.English("Increases the health of pieces built by you and you can build higher.");
 		building.Name.German("Bauen");
 		building.Description.German("Erhöht die Lebenspunkte von Bauten, die von dir errichtet wurden und du kannst höher bauen.");
+  		building.Name.Chinese("建造");
+		building.Description.Chinese("提高由你建造的建筑的生命值，并且能够建得更高");
 		building.Configurable = false;
 
 		serverConfigLocked = config("1 - General", "Lock Configuration", Toggle.On, "If on, the configuration is locked and can be changed by server admins only.");
